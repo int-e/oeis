@@ -64,12 +64,13 @@ count n = solve p0 where
     solve' [] = 1
     solve' [s] = fromIntegral (S.size s)
     solve' p
-        | not (null os) = if S.size (S.unions os) /= length os then 0
+        | not (null os) = if S.size oss /= length os then 0
                           else solve' (map (`S.difference` sos) qs)
         | otherwise = product (map solve (collect p))
       where
         -- find forced conclusions ('multipropagate')
         (os, qs) = partition ((1 >=) . S.size) p
+        oss = S.unions os
         sos = S.unions [divs o `S.union` mults o | o <- S.toList oss]
 
         -- find independent subproblems ('split')
@@ -83,4 +84,5 @@ drop1 [] = []
 drop1 (x:xs) = xs : map (x:) (drop1 xs)
 
 main = do
-    mapM_ print [(n, count n) | n <- [1..200]]
+    mapM_ (\(a, b) -> putStrLn $ unwords [show a, show b]) $
+        [(n, count n) | n <- [1..200]]
