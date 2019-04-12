@@ -15,8 +15,9 @@ search trees.
    b) remove n from the candidate set
  * backtrack: if a candidate set is empty, there can be no solution
  * split: if the candidate set list can be split into two parts whose
-   unions are disjoint, then count solutions for each of the parts
-   and multiply them (the parts are independent).
+   unions do not clash (sets P and Q clash if there are x in P, y in Q
+   such that x | y or y | x), then count solutions for each of the parts
+   separately and multiply the results (the parts are independent).
 
 By combining branch and backtrack, we get unit propagation: if a singleton
 candidate set exists, we can select that candidate immediately (skipping
@@ -38,6 +39,7 @@ candidate sets simultaneously.
 
 import qualified Data.IntSet as S
 import Data.List
+import System.IO
 
 count :: Int -> Integer
 count n = solve p0 where
@@ -76,6 +78,22 @@ count n = solve p0 where
         -- find independent subproblems ('split')
         collect [] = [[]]
         collect (p:ps) = (p : concat qs) : rs where
+            -- find all the potentially clashing elements for P:
+            -- - if x in P is selected, then it will clash with any multiple
+            --   or divisor of x
+            _p' = S.unions [divs x `S.union` mults x | x <- S.toList p]
+
+            -- Actually we can just check for common elements with P, for the
+            -- following reason: Initially (see p0 above), all candidate sets
+            -- are closed under taking divisors, and furthermore, whenever we
+            -- branch, we remove the same elements (pvs above) from all the
+            -- candidate sets. So if x in P clashes with some y in Q, then
+            -- - if x | y, we have x in Q originally, and since it's still
+            --   present in P, it's still present in Q as well, so P and Q
+            --   have x as a common element.
+            -- - similarly,. if y | x, we have y in P originally, and since
+            --   it's still present in Q, it must still be present in Q as
+            --   well, i.e., P and Q have y as a common element.
             (qs, rs) = partition (any (not . S.null . (`S.intersection` p)))
                 (collect ps)
 
@@ -84,5 +102,6 @@ drop1 [] = []
 drop1 (x:xs) = xs : map (x:) (drop1 xs)
 
 main = do
+    hSetBuffering stdout LineBuffering
     mapM_ (\(a, b) -> putStrLn $ unwords [show a, show b]) $
-        [(n, count n) | n <- [1..200]]
+        [(n, count n) | n <- [1..]]
